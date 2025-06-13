@@ -1,0 +1,538 @@
+---
+title: "Hypothesis Testing for a Single Mean"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(gradethis)
+library(ggcheck)
+library(tidyverse)
+library(broom)
+library(infer)
+
+gradethis::gradethis_setup()
+
+# Sample data for exercises
+set.seed(123)
+coffee_data <- tibble(
+  customer_id = 1:50,
+  daily_cups = rnorm(50, mean = 2.8, sd = 1.2)
+)
+
+# Another dataset for practice
+study_hours <- tibble(
+  student_id = 1:30,
+  hours_per_week = rnorm(30, mean = 18.5, sd = 4.2)
+)
+```
+
+## Introduction
+
+Welcome to this tutorial on hypothesis testing for a single mean! In this lesson, you'll learn how to:
+
+- Set up null and alternative hypotheses
+- Calculate test statistics
+- Determine p-values
+- Make statistical conclusions
+- Use R and the tidyverse to perform these tests
+
+### Learning Objectives
+
+By the end of this tutorial, you will be able to:
+
+1. Formulate appropriate null and alternative hypotheses for a single mean
+2. Calculate and interpret a t-test statistic
+3. Use R functions to perform one-sample t-tests
+4. Make decisions based on p-values and significance levels
+
+## Topic 1: Understanding Hypothesis Testing
+
+Hypothesis testing is a statistical method used to make decisions about population parameters based on sample data.
+
+### The infer Workflow
+
+The infer package provides a consistent grammar for statistical inference that follows this pattern:
+
+```
+data %>%
+  specify(response = variable) %>%
+  hypothesize(null = "point", mu = value) %>%
+  calculate(stat = "t")
+```
+
+This approach makes the logic of hypothesis testing explicit and easier to understand.
+
+### Example Scenario
+
+A coffee shop claims that their customers drink an average of 3 cups of coffee per day. You collect data from 50 customers to test this claim using the infer workflow.
+
+```{r explore-data, exercise=TRUE}
+# Let's look at our coffee data
+coffee_data %>%
+  glimpse()
+
+# Calculate basic summary statistics
+coffee_data %>%
+  summarise(
+    n = n(),
+    mean_cups = mean(daily_cups),
+    sd_cups = sd(daily_cups),
+    se_cups = sd(daily_cups) / sqrt(n())
+  )
+```
+
+```{r explore-data-check}
+grade_code("Great! You've successfully explored the structure and basic statistics of our coffee data.")
+```
+
+## Topic 2: Setting Up Hypotheses
+
+### Step 1: Formulate Your Hypotheses
+
+For our coffee shop example:
+
+$$
+H_{0}: \mu = 3 \quad \text{vs} \quad H_{A}: \mu \neq 3
+$$
+
+### Practice: State the Hypotheses
+
+Consider a university that claims students study an average of 20 hours per week. You want to test if this claim is accurate.
+
+```{r hypotheses-quiz, echo=FALSE}
+question("What should the null hypothesis be?",
+  answer("H₀: μ < 20", message = "This would be for a one-sided test where we specifically think the mean is less than 20."),
+  answer("H₀: μ > 20", message = "This would be for a one-sided test where we specifically think the mean is greater than 20."),
+  answer("H₀: μ = 20", correct = TRUE, message = "Correct! The null hypothesis states that the population mean equals the claimed value."),
+  answer("H₀: μ ≠ 20", message = "This looks like an alternative hypothesis, not a null hypothesis."),
+  allow_retry = TRUE
+)
+```
+
+# ```{r alternative-quiz, echo=FALSE}
+question("If we want to test whether the true mean is different from 20 (either higher or lower), what should the alternative hypothesis be?",
+  answer("H₁: μ = 20", message = "This is actually the null hypothesis."),
+  answer("H₁: μ ≠ 20", correct = TRUE, message = "Correct! This is a two-sided alternative hypothesis."),
+  answer("H₁: μ < 20", message = "This would be correct for a one-sided test if we specifically suspected the mean was less than 20."),
+  answer("H₁: μ > 20", message = "This would be correct for a one-sided test if we specifically suspected the mean was greater than 20."),
+  allow_retry = TRUE
+)
+```
+
+## Topic 3: The infer Grammar of Inference
+
+### Understanding the infer Workflow
+
+The infer package breaks down hypothesis testing into clear, logical steps:
+
+1. **specify()**: Identify the variable of interest
+2. **hypothesize()**: State the null hypothesis
+3. **calculate()**: Compute the test statistic
+4. **get_p_value()**: Calculate the p-value
+
+### Step-by-Step with Coffee Data
+
+Let's work through each step of the infer workflow:
+
+```{r infer-specify, exercise=TRUE}
+# Step 1: Specify the response variable
+coffee_specified <- coffee_data %>%
+  specify(response = daily_cups)
+
+# Look at the structure
+coffee_specified
+```
+
+```{r infer-specify-check}
+grade_code("Great! You've specified the response variable using infer's specify() function.")
+```
+
+### Adding the Null Hypothesis
+
+```{r infer-hypothesize, exercise=TRUE}
+# Step 2: Add the null hypothesis
+coffee_hypothesis <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3)
+
+# View the result
+coffee_hypothesis
+```
+
+```{r infer-hypothesize-check}
+grade_code("Perfect! You've added the null hypothesis that the true mean equals 3.")
+```
+
+### Calculating the Test Statistic
+
+```{r infer-calculate, exercise=TRUE}
+# Step 3: Calculate the t-statistic
+coffee_t_stat <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3) %>%
+  calculate(stat = "t")
+
+# Display the t-statistic
+coffee_t_stat
+```
+
+```{r infer-calculate-check}
+grade_code("Excellent! You've calculated the t-statistic using the infer workflow.")
+```
+
+### Practice: Complete infer Workflow
+
+Now try the complete infer workflow for the study hours data:
+
+```{r practice-infer-workflow, exercise=TRUE}
+# Complete the infer workflow for study hours
+# Test H₀: μ = 20 vs H₁: μ ≠ 20
+
+study_t_stat <- study_hours %>%
+  specify(response = ___) %>%
+  hypothesize(null = ___, mu = ___) %>%
+  calculate(stat = ___)
+
+study_t_stat
+```
+
+```{r practice-infer-workflow-solution}
+study_t_stat <- study_hours %>%
+  specify(response = hours_per_week) %>%
+  hypothesize(null = "point", mu = 20) %>%
+  calculate(stat = "t")
+
+study_t_stat
+```
+
+```{r practice-infer-workflow-check}
+grade_code("Perfect! You've mastered the infer workflow for calculating test statistics.")
+```
+
+## Topic 4: Getting P-values with infer
+
+### The get_p_value() Function
+
+Once we have our observed test statistic, we can calculate the p-value using `get_p_value()`:
+
+```{r infer-pvalue, exercise=TRUE}
+# Calculate p-value for coffee data (two-sided test)
+coffee_p_value <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3) %>%
+  calculate(stat = "t") %>%
+  get_p_value(obs_stat = ., direction = "two-sided")
+
+coffee_p_value
+```
+
+```{r infer-pvalue-check}
+grade_code("Great! You've calculated the p-value using infer's get_p_value() function.")
+```
+
+### Complete Test with infer
+
+We can also do the entire test in one pipeline and store the statistic for p-value calculation:
+
+```{r complete-infer-test, exercise=TRUE}
+# Complete hypothesis test using infer
+observed_t_stat <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3) %>%
+  calculate(stat = "t")
+
+# Get the p-value
+p_value_result <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3) %>%
+  calculate(stat = "t") %>%
+  get_p_value(obs_stat = observed_t_stat, direction = "two-sided")
+
+# Display results
+print("Observed t-statistic:")
+observed_t_stat
+
+print("P-value:")
+p_value_result
+```
+
+```{r complete-infer-test-check}
+grade_code("Excellent! You've performed a complete hypothesis test using the infer framework.")
+```
+
+### Practice: Your Turn with Study Hours
+
+Complete the hypothesis test for study hours using infer:
+
+```{r practice-complete-infer, exercise=TRUE}
+# Test if students study significantly different from 20 hours per week
+# Complete both the test statistic and p-value calculation
+
+# Step 1: Calculate observed t-statistic
+study_observed <- study_hours %>%
+  specify(response = ___) %>%
+  hypothesize(null = ___, mu = ___) %>%
+  calculate(stat = ___)
+
+# Step 2: Calculate p-value
+study_p_value <- study_hours %>%
+  specify(response = ___) %>%
+  hypothesize(null = ___, mu = ___) %>%
+  calculate(stat = ___) %>%
+  get_p_value(obs_stat = study_observed, direction = ___)
+
+# Display results
+print("Observed t-statistic:")
+study_observed
+
+print("P-value:")
+study_p_value
+```
+
+```{r practice-complete-infer-solution}
+study_observed <- study_hours %>%
+  specify(response = hours_per_week) %>%
+  hypothesize(null = "point", mu = 20) %>%
+  calculate(stat = "t")
+
+study_p_value <- study_hours %>%
+  specify(response = hours_per_week) %>%
+  hypothesize(null = "point", mu = 20) %>%
+  calculate(stat = "t") %>%
+  get_p_value(obs_stat = study_observed, direction = "two-sided")
+
+print("Observed t-statistic:")
+study_observed
+
+print("P-value:")
+study_p_value
+```
+
+```{r practice-complete-infer-check}
+grade_code("Outstanding! You've successfully completed a full hypothesis test using the infer workflow.")
+```
+
+## Topic 5: Interpreting Results and Making Decisions
+
+### Understanding infer Output
+
+When using infer, you get clean, interpretable output:
+
+- **Test statistic**: The calculated t-value
+- **P-value**: A tibble showing the probability
+- **Clear workflow**: Each step is explicit and logical
+
+### Comparing infer to Traditional Methods
+
+The infer approach has several advantages:
+- **Consistency**: Same grammar for different types of tests
+- **Clarity**: Each step is explicit
+- **Flexibility**: Easy to switch between parametric and simulation-based methods
+- **Tidyverse integration**: Works seamlessly with dplyr and ggplot2
+
+### Decision Rules
+
+- If p-value ≤ α (typically 0.05): **Reject H₀**
+- If p-value > α: **Fail to reject H₀**
+
+### Practice: Interpretation
+
+```{r interpretation-quiz}
+question("If your t-test gives a p-value of 0.03 and you're using α = 0.05, what should you conclude?",
+  answer("Fail to reject the null hypothesis", message = "Not quite. Compare the p-value (0.03) to α (0.05)."),
+  answer("Reject the null hypothesis", correct = TRUE, message = "Correct! Since p-value (0.03) < α (0.05), we reject H₀."),
+  answer("Accept the null hypothesis", message = "We never 'accept' the null hypothesis, only fail to reject it."),
+  answer("The test is inconclusive", message = "The test gives us a clear decision based on the p-value."),
+  allow_retry = TRUE
+)
+```
+
+## Topic 6: Comprehensive Analysis with infer
+
+Let's put it all together with a complete analysis using the infer workflow:
+
+```{r complete-infer-analysis, exercise=TRUE}
+# Complete analysis of coffee consumption data using infer
+
+# Step 1: Explore the data (using tidyverse)
+coffee_summary <- coffee_data %>%
+  summarise(
+    n = n(),
+    mean_cups = mean(daily_cups),
+    sd_cups = sd(daily_cups),
+    se_cups = sd(daily_cups) / sqrt(n())
+  )
+
+print("Data Summary:")
+coffee_summary
+
+# Step 2: Hypothesis test using infer workflow
+# H₀: μ = 3 vs H₁: μ ≠ 3
+
+# Calculate test statistic
+observed_stat <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3) %>%
+  calculate(stat = "t")
+
+# Calculate p-value
+p_value <- coffee_data %>%
+  specify(response = daily_cups) %>%
+  hypothesize(null = "point", mu = 3) %>%
+  calculate(stat = "t") %>%
+  get_p_value(obs_stat = observed_stat, direction = "two-sided")
+
+print("Hypothesis Test Results:")
+print(paste("T-statistic:", round(observed_stat$stat, 4)))
+print(paste("P-value:", round(p_value$p_value, 4)))
+
+# Step 3: Decision
+alpha <- 0.05
+decision <- ifelse(p_value$p_value < alpha, 
+                   "Reject the null hypothesis", 
+                   "Fail to reject the null hypothesis")
+print(paste("Decision (α = 0.05):", decision))
+
+# Step 4: Create a visualization
+coffee_plot <- coffee_data %>%
+  ggplot(aes(x = daily_cups)) +
+  geom_histogram(bins = 15, fill = "skyblue", alpha = 0.7, color = "black") +
+  geom_vline(xintercept = 3, color = "red", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = mean(coffee_data$daily_cups), color = "blue", size = 1) +
+  labs(
+    title = "Distribution of Daily Coffee Consumption",
+    subtitle = "Red line: Hypothesized mean (3), Blue line: Sample mean",
+    x = "Daily Cups of Coffee",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+coffee_plot
+```
+
+```{r complete-infer-analysis-check}
+grade_code("Outstanding! You've completed a comprehensive analysis using the infer workflow with clear interpretation and visualization.")
+```
+
+### Final Challenge: Complete infer Analysis
+
+Now complete your own comprehensive analysis using the study hours data and the infer workflow:
+
+```{r final-infer-challenge, exercise=TRUE}
+# Your turn! Complete analysis of study hours data using infer
+# Test H₀: μ = 20 vs H₁: μ ≠ 20
+
+# Step 1: Summary statistics
+study_summary <- study_hours %>%
+  summarise(
+    n = ___,
+    mean_hours = ___,
+    sd_hours = ___
+  )
+
+# Step 2: Calculate test statistic using infer
+observed_t <- study_hours %>%
+  specify(response = ___) %>%
+  hypothesize(null = ___, mu = ___) %>%
+  calculate(stat = ___)
+
+# Step 3: Calculate p-value using infer
+p_val <- study_hours %>%
+  specify(response = ___) %>%
+  hypothesize(null = ___, mu = ___) %>%
+  calculate(stat = ___) %>%
+  get_p_value(obs_stat = observed_t, direction = ___)
+
+# Step 4: Make decision
+alpha <- 0.05
+decision <- ifelse(p_val$p_value < alpha, 
+                   "Reject H₀", 
+                   "Fail to reject H₀")
+
+# Display all results
+print("Summary Statistics:")
+study_summary
+
+print("Test Results:")
+print(paste("T-statistic:", round(observed_t$stat, 4)))
+print(paste("P-value:", round(p_val$p_value, 4)))
+print(paste("Decision:", decision))
+```
+
+```{r final-infer-challenge-solution}
+study_summary <- study_hours %>%
+  summarise(
+    n = n(),
+    mean_hours = mean(hours_per_week),
+    sd_hours = sd(hours_per_week)
+  )
+
+observed_t <- study_hours %>%
+  specify(response = hours_per_week) %>%
+  hypothesize(null = "point", mu = 20) %>%
+  calculate(stat = "t")
+
+p_val <- study_hours %>%
+  specify(response = hours_per_week) %>%
+  hypothesize(null = "point", mu = 20) %>%
+  calculate(stat = "t") %>%
+  get_p_value(obs_stat = observed_t, direction = "two-sided")
+
+alpha <- 0.05
+decision <- ifelse(p_val$p_value < alpha, 
+                   "Reject H₀", 
+                   "Fail to reject H₀")
+
+print("Summary Statistics:")
+study_summary
+
+print("Test Results:")
+print(paste("T-statistic:", round(observed_t$stat, 4)))
+print(paste("P-value:", round(p_val$p_value, 4)))
+print(paste("Decision:", decision))
+```
+
+```{r final-infer-challenge-check}
+grade_code("Perfect! You've mastered the infer workflow for hypothesis testing. You can now confidently use this approach for statistical inference!")
+```
+
+## Summary
+
+Congratulations! You've learned how to:
+
+✅ **Use the infer grammar** for statistical inference  
+✅ **Apply the specify-hypothesize-calculate workflow** for hypothesis testing  
+✅ **Calculate test statistics and p-values** using a consistent framework  
+✅ **Interpret results** and make statistical decisions  
+✅ **Integrate infer with tidyverse tools** for complete analyses  
+✅ **Create visualizations** to support your statistical conclusions  
+
+### Key Takeaways
+
+1. **The infer workflow is intuitive**: `specify() %>% hypothesize() %>% calculate()`
+2. **Consistency across tests**: Same grammar works for different statistical tests
+3. **Clear and explicit**: Each step makes your analysis transparent
+4. **Tidyverse compatible**: Works seamlessly with dplyr and ggplot2
+5. **Flexible framework**: Easy to extend to simulation-based methods
+
+### The infer Advantage
+
+The infer package makes statistical inference:
+- **More intuitive** - the workflow mirrors statistical thinking
+- **More consistent** - same grammar for different tests
+- **More transparent** - each step is explicit
+- **More flexible** - easy to switch between parametric and non-parametric approaches
+
+### Next Steps
+
+- Explore simulation-based approaches with infer
+- Learn about confidence intervals using infer
+- Apply infer to two-sample tests and categorical data
+- Practice with different types of hypothesis tests using the same workflow
+
+Great work completing this tutorial!
